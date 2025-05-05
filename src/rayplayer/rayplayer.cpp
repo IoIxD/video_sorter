@@ -130,7 +130,6 @@ inline bool file_exists(const std::string &name) {
 }
 
 Player::Player() {
-  InitAudioDevice();
   init_pq();
 
   pFormatCtx = avformat_alloc_context();
@@ -206,15 +205,20 @@ Player::Player() {
 
   SetTargetFPS(targetFPS);
 
+  // rayAStream = LoadAudioStream(44100, 32, 2);
+  // SetAudioStreamCallback(rayAStream, audio_callback);
+  // PlayAudioStream(rayAStream);
+
+  vframe = 0;
+}
+
+Image Player::fetch_next_image() {
   pRGBFrame = av_frame_alloc();
   pRGBFrame->format = AV_PIX_FMT_RGB24;
   pRGBFrame->width = videoCodecCtx->width;
   pRGBFrame->height = videoCodecCtx->height;
   av_frame_get_buffer(pRGBFrame, 0);
-  vframe = 0;
-}
 
-Image Player::fetch_next_image() {
   Image img;
   img.height = videoCodecCtx->height;
   img.width = videoCodecCtx->width;
@@ -242,9 +246,6 @@ Image Player::fetch_next_image() {
         img.data = pRGBFrame->data[0];
       }
       break;
-    } else if (packet->stream_index == audioStream->index) {
-      AVPacket *cloned = av_packet_clone(packet);
-      pq_put(*cloned);
     }
     av_packet_unref(packet);
   }
@@ -295,13 +296,11 @@ std::vector<uint8_t> Player::fetch_next_audio() {
 }
 
 Player::~Player() {
-  // UnloadAudioStream(rayAStream);
 
-  CloseWindow();
-  CloseAudioDevice();
+  // CloseWindow();
+  // CloseAudioDevice();
 
   av_frame_free(&frame);
-  av_frame_free(&pRGBFrame);
   av_packet_unref(packet);
   av_packet_free(&packet);
   avcodec_free_context(&videoCodecCtx);
